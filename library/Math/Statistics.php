@@ -14,20 +14,22 @@ abstract class Statistics
      * The k-means clustering algorithm, also known as Lloyd's algorithm
      * http://en.wikipedia.org/wiki/K-means_clustering#Standard_algorithm
      *
-     * Returns an array of detected clusters with the data points assigned to them
+     * Input a key-ordered set of data points.
+     *
+     * Returns an array of detected clusters with the key-ordered data points assigned to them
      */
     public static function kMeansClusters($data, $iterations = null)
     {
         if (!Vector::consistent($data)) throw new \Exception(self::NOT_CONSISTENT);
 
         // Get basic data from input
-        $data = array_values($data);
+        $dataset = array_values($data);
         $size = count($data);
         $k = ceil(sqrt($size / 2));
 
         // Initialize the centroids
         $centroids = array();
-        for($i = 0; $i < $k; $i++) $centroids[] = $data[mt_rand(0, $size - 1)];
+        for($i = 0; $i < $k; $i++) $centroids[] = $dataset[mt_rand(0, $size - 1)];
 
         $iterate = true;
         while($iterate) {
