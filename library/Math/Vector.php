@@ -1,11 +1,13 @@
 <?php
 
+namespace WT\Math;
+
 /**
  * A multi-dimensional vector class
  *
  * Implements ArrayAccess so you can get its coordinates easily
  */
-class Vector implements ArrayAccess
+class Vector implements \ArrayAccess
 {
     // Exception messages
     const UNKNOWN_SIZE = "Can not initialize a null vector";
@@ -33,7 +35,7 @@ class Vector implements ArrayAccess
         $data = func_get_args();
 
         // Check number of arguments
-        if (count($data) == 0) throw new Exception(self::UNKNOWN_SIZE);
+        if (count($data) == 0) throw new \Exception(self::UNKNOWN_SIZE);
         if (count($data) == 1) $data = current($data);
 
         // If data is an integer, it is the dimension
@@ -42,7 +44,7 @@ class Vector implements ArrayAccess
             $this->_data = array_fill(0, $this->dimension, 0);
         } else {
             // Must be an array ...
-            if (!is_array($data)) throw new Exception(self::INVALID_DATA);
+            if (!is_array($data)) throw new \Exception(self::INVALID_DATA);
         
             // ... numerically indexed ...
             $data = array_values($data);
@@ -56,7 +58,7 @@ class Vector implements ArrayAccess
 
                 return false;
             }, true);
-            if (!$pass) throw new Exception(self::INVALID_DATA);
+            if (!$pass) throw new \Exception(self::INVALID_DATA);
 
             $this->_data = $data;
             $this->dimension = count($data);
@@ -75,7 +77,7 @@ class Vector implements ArrayAccess
         );
 
         if (!in_array($var, $whitelist)) 
-            throw new Exception(sprintf(self::INVALID_MEMBER, $var, __CLASS__));
+            throw new \Exception(sprintf(self::INVALID_MEMBER, $var, __CLASS__));
 
         return $this->$var;
     }
@@ -97,8 +99,8 @@ class Vector implements ArrayAccess
      */
     public function offsetGet($offset)
     {
-        if (!is_int($offset)) throw new Exception(sprintf(self::INVALID_INDEX, $offset));
-        if ($offset < 0 || $offset >= $this->dimension) throw new Exception(sprintf(self::OUT_OF_BOUNDS, $offset));
+        if (!is_int($offset)) throw new \Exception(sprintf(self::INVALID_INDEX, $offset));
+        if ($offset < 0 || $offset >= $this->dimension) throw new \Exception(sprintf(self::OUT_OF_BOUNDS, $offset));
 
         return $this->_data[$offset];
     }
@@ -110,9 +112,9 @@ class Vector implements ArrayAccess
      */
     public function offsetSet($offset, $value) 
     {
-        if (!is_int($offset)) throw new Exception(sprintf(self::INVALID_INDEX, $offset));
-        if ($offset < 0 || $offset >= $this->dimension) throw new Exception(sprintf(self::OUT_OF_BOUNDS, $offset));
-        if (!is_numeric($value)) throw new Exception(self::INVALID_DATA);
+        if (!is_int($offset)) throw new \Exception(sprintf(self::INVALID_INDEX, $offset));
+        if ($offset < 0 || $offset >= $this->dimension) throw new \Exception(sprintf(self::OUT_OF_BOUNDS, $offset));
+        if (!is_numeric($value)) throw new \Exception(self::INVALID_DATA);
 
         $this->_data[$offset] = floatval($value);
     }
@@ -125,7 +127,7 @@ class Vector implements ArrayAccess
      */
     public function offsetUnset($offset)
     {
-        throw new Exception(self::CANNOT_UNSET);
+        throw new \Exception(self::CANNOT_UNSET);
     }
 
     /**
@@ -156,7 +158,7 @@ class Vector implements ArrayAccess
      * Subtracts the given vector from the current vector and returns the result
      */
     public function subtract(Vector $v) {
-        if ($this->dimension != $v->dimension) throw new Exception(self::INVALID_OPERATION);
+        if ($this->dimension != $v->dimension) throw new \Exception(self::INVALID_OPERATION);
 
         $ret = array_map(function($i, $j) {
             return $i - $j;
@@ -172,7 +174,7 @@ class Vector implements ArrayAccess
      */
     public function add(Vector $v) 
     {
-        if ($this->dimension != $v->dimension) throw new Exception(self::INVALID_OPERATION);
+        if ($this->dimension != $v->dimension) throw new \Exception(self::INVALID_OPERATION);
 
         $ret = array_map(function($i, $j) {
             return $i + $j;
@@ -200,7 +202,7 @@ class Vector implements ArrayAccess
      */
     public function min(Vector $v)
     {
-        if ($this->dimension != $v->dimension) throw new Exception(self::INVALID_OPERATION);
+        if ($this->dimension != $v->dimension) throw new \Exception(self::INVALID_OPERATION);
 
         $ret = array_map("min", $this->_data, $v->get());
 
@@ -215,7 +217,7 @@ class Vector implements ArrayAccess
      */
     public function max(Vector $v)
     {
-        if ($this->dimension != $v->dimension) throw new Exception(self::INVALID_OPERATION);
+        if ($this->dimension != $v->dimension) throw new \Exception(self::INVALID_OPERATION);
 
         $ret = array_map("max", $this->_data, $v->get());
 
@@ -232,6 +234,8 @@ class Vector implements ArrayAccess
      */
     public static function groupMin($vectors)
     {
+        if (!self::consistent($vectors)) throw new \Exception(self::INVALID_OPERATION);
+
         $ret = current($vectors);
         foreach($vectors as $v) $ret = $ret->min($v);
         return $ret;
@@ -242,13 +246,44 @@ class Vector implements ArrayAccess
      *
      * Returns the vector with the maximum coordinate values from the given array of
      * vectors
-     *
-     * TODO: Check if the array indeed contains vectors only
      */
     public static function groupMax($vectors)
     {
+        if (!self::consistent($vectors)) throw new \Exception(self::INVALID_OPERATION);
+
         $ret = current($vectors);
         foreach($vectors as $v) $ret = $ret->max($v);
         return $ret;
+    }
+
+    public static function average($vectors)
+    {
+        if (!self::consistent($vectors)) throw new \Exception(self::INVALID_OPERATION);
+
+        $dimension = current($vectors)->dimension;
+        $size = count($vectors);
+
+        $ret = new self($dimension);
+        for($i = 0; $i < $dimension; $i++) {
+            $sum = array_reduce($vectors, function($u, $v) use ($i) { return $u + $v[$i]; });
+            $ret[$i] = $sum / $size;
+        }
+
+        return $ret;
+    }
+
+    /**
+     * Check array consistency
+     *
+     * Returns true if all the elements in the given array are vectors of equal
+     * dimension
+     */
+    public static function consistent($vectors)
+    {
+        $dimension = current($vectors)->dimension;
+
+        return array_reduce($vectors, function($u, $v) use ($dimension) {
+            return $u && ($v instanceof Vector) && ($v->dimension === $dimension);
+        }, true);
     }
 }
