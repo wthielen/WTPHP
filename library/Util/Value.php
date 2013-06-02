@@ -10,7 +10,7 @@ abstract class Value
     /**
      * Clamps a value between a minimum and maximum value.
      */
-    public static clamp($val, $min, $max) {
+    public static function clamp($val, $min, $max) {
         if ($val < $min) $val = $min;
         if ($val > $max) $val = $max;
 

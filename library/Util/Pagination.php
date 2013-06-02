@@ -86,7 +86,7 @@ class Pagination
      */
     public function setPage($page)
     {
-        $this->currentPage = WT\Util\Value::clamp($page, 1, $this->totalPages);
+        $this->currentPage = \WT\Util\Value::clamp($page, 1, $this->totalPages);
     }
 
     /**
